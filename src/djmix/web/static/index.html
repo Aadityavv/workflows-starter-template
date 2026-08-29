@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>djmix</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0e0f13; --panel: #16181f; --panel-2: #1d202a; --line: #2a2e3a;
+    --text: #e8eaf0; --dim: #939aab; --accent: #6ee7b7; --accent-2: #7dd3fc;
+    --warn: #fbbf24; --err: #f87171; --radius: 12px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --panel: #fff; --panel-2: #f0f2f6; --line: #dfe3ea;
+      --text: #14161c; --dim: #626b7d; --accent: #0f9d70; --accent-2: #0284c7;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--dim); font-size: 14px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px; margin-top: 18px;
+  }
+  h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase;
+       letter-spacing: 0.08em; color: var(--dim); font-weight: 600; }
+  #drop {
+    border: 2px dashed var(--line); border-radius: var(--radius);
+    padding: 30px 18px; text-align: center; cursor: pointer; transition: .15s;
+  }
+  #drop.over, #drop:hover { border-color: var(--accent); background: var(--panel-2); }
+  #drop b { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--dim); font-weight: 600; font-size: 12px;
+       text-transform: uppercase; letter-spacing: .06em; padding: 6px 8px;
+       border-bottom: 1px solid var(--line); }
+  td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 999px;
+           background: var(--panel-2); border: 1px solid var(--line);
+           font-size: 12px; color: var(--dim); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line);
+          background: var(--panel-2); cursor: pointer; font-size: 14px; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent);
+                               background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  label.field { display: block; margin-top: 14px; font-size: 13px; color: var(--dim); }
+  input[type=text], input[type=number], select {
+    width: 100%; margin-top: 5px; padding: 9px 11px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    font: inherit; font-size: 14px;
+  }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 180px; }
+  button.primary {
+    margin-top: 18px; width: 100%; padding: 13px; font: inherit; font-weight: 600;
+    border: 0; border-radius: 10px; background: var(--accent); color: #06231a;
+    cursor: pointer;
+  }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: none; border: 1px solid var(--line); color: var(--dim);
+                 border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 13px;
+                 cursor: pointer; }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); }
+  .bar { height: 7px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .muted { color: var(--dim); font-size: 13px; }
+  .err { color: var(--err); }
+  .warn { color: var(--warn); }
+  audio { width: 100%; margin-top: 12px; }
+  .timeline { display: flex; height: 40px; border-radius: 8px; overflow: hidden;
+              border: 1px solid var(--line); margin-top: 14px; }
+  .seg { display: flex; align-items: center; justify-content: center; font-size: 11px;
+         color: #06231a; overflow: hidden; white-space: nowrap; padding: 0 4px; }
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
+  .stats div b { display: block; font-size: 17px; font-weight: 600; }
+  .stats div span { color: var(--dim); font-size: 12px; }
+  .hint { font-size: 12.5px; color: var(--dim); margin-top: 10px; line-height: 1.5; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center;
+             gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>djmix</h1>
+    <span class="sub">Your own music, merged into DJ-style mixes.</span>
+  </header>
+  <p class="hint" style="margin-top:0">
+    Running locally on your machine. Files never leave it, and only measured numbers
+    &mdash; never audio &mdash; are ever sent to an LLM, and only if you choose that planner.
+  </p>
+
+  <section class="panel">
+    <h2>1 &middot; Your library</h2>
+    <div id="drop">
+      <b>Drop audio files here</b> or click to choose<br>
+      <span class="muted" id="formats">mp3, wav, flac, m4a, ogg</span>
+    </div>
+    <div id="uploadStatus" style="margin-top:14px"></div>
+
+    <div id="libraryWrap" style="margin-top:16px; display:none">
+      <div class="toolbar">
+        <span class="muted" id="libCount"></span>
+        <span>
+          <button class="ghost" id="selectAll">Select all</button>
+          <button class="ghost" id="selectNone">None</button>
+          <button class="ghost" id="purge">Delete all my data</button>
+        </span>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:28px"></th><th>Track</th><th>BPM</th><th>Key</th>
+          <th>Energy</th><th>Mood</th><th></th>
+        </tr></thead>
+        <tbody id="library"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>2 &middot; What kind of mix?</h2>
+    <div class="chips" id="occasions"></div>
+    <label class="field">Or describe it
+      <input type="text" id="prompt" placeholder="a 20-minute high-energy pre-workout mix">
+    </label>
+    <div class="row">
+      <label class="field">Target length (minutes)
+        <input type="number" id="duration" min="1" step="1" placeholder="any">
+      </label>
+      <label class="field">Planner
+        <select id="planner">
+          <option value="rule">Rule-based (offline, no API key)</option>
+          <option value="llm">LLM (needs GROQ_API_KEY)</option>
+        </select>
+      </label>
+      <label class="field">Format
+        <select id="format"><option>mp3</option><option>wav</option><option>flac</option></select>
+      </label>
+    </div>
+    <button class="primary" id="go" disabled>Generate mix</button>
+    <div class="hint" id="plannerHint">
+      The rule-based planner needs no network. The LLM planner only reorders tracks and
+      picks transition styles &mdash; every BPM, key and timestamp still comes from the
+      audio analysis, and an invalid response falls back to the rule planner.
+    </div>
+  </section>
+
+  <section class="panel" id="progressPanel" style="display:none">
+    <h2>Working</h2>
+    <div class="bar"><i id="progressBar"></i></div>
+    <p class="muted" id="progressMsg" style="margin:10px 0 0"></p>
+  </section>
+
+  <section class="panel" id="resultPanel" style="display:none">
+    <h2>3 &middot; Your mix</h2>
+    <div id="resultMeta"></div>
+    <div class="timeline" id="timeline"></div>
+    <audio id="player" controls preload="metadata"></audio>
+    <div class="stats" id="stats"></div>
+    <div style="margin-top:14px">
+      <a id="download" class="ghost" style="text-decoration:none; padding:7px 13px" download>Download</a>
+      <button class="ghost" id="showPlan">View plan JSON</button>
+    </div>
+    <pre id="planJson" class="muted" style="display:none; overflow:auto; max-height:320px;
+         background:var(--panel-2); padding:12px; border-radius:9px; margin-top:12px"></pre>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { tracks: [], selected: new Set(), occasion: null, config: null };
+
+const api = async (path, opts = {}) => {
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    let detail = res.statusText;
+    try { detail = (await res.json()).detail || detail; } catch {}
+    throw new Error(detail);
+  }
+  return res.status === 204 ? null : res.json();
+};
+
+async function loadConfig() {
+  state.config = await api('/api/config');
+  $('formats').textContent = state.config.supported_uploads.join(', ')
+    + ` · up to ${state.config.max_upload_mb} MB each`;
+  $('occasions').innerHTML = '';
+  for (const name of state.config.occasions) {
+    const chip = document.createElement('button');
+    chip.className = 'chip';
+    chip.type = 'button';
+    chip.textContent = name;
+    chip.setAttribute('aria-pressed', 'false');
+    chip.onclick = () => {
+      const on = state.occasion === name;
+      state.occasion = on ? null : name;
+      for (const c of $('occasions').children)
+        c.setAttribute('aria-pressed', String(!on && c.textContent === name));
+    };
+    $('occasions').append(chip);
+  }
+}
+
+async function loadTracks() {
+  const { tracks } = await api('/api/tracks');
+  state.tracks = tracks;
+  for (const id of [...state.selected])
+    if (!tracks.some(t => t.track_id === id)) state.selected.delete(id);
+
+  $('libraryWrap').style.display = tracks.length ? 'block' : 'none';
+  $('libCount').textContent = `${tracks.length} track${tracks.length === 1 ? '' : 's'} analysed`
+    + ` · ${state.selected.size} selected`;
+
+  const body = $('library');
+  body.innerHTML = '';
+  for (const t of tracks) {
+    const tr = document.createElement('tr');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = state.selected.has(t.track_id);
+    cb.onchange = () => {
+      cb.checked ? state.selected.add(t.track_id) : state.selected.delete(t.track_id);
+      refreshGo();
+      $('libCount').textContent =
+        `${tracks.length} track${tracks.length === 1 ? '' : 's'} analysed · ${state.selected.size} selected`;
+    };
+    const td0 = document.createElement('td'); td0.append(cb);
+
+    const bpm = t.bpm_ambiguous
+      ? `${t.bpm} <span class="badge" title="Half/double-time is also a plausible DJ tempo for this track — both readings describe the same groove.">±oct</span>`
+      : String(t.bpm);
+
+    tr.append(td0);
+    tr.insertAdjacentHTML('beforeend', `
+      <td>${escapeHtml(t.filename)}</td>
+      <td>${bpm}</td>
+      <td>${escapeHtml(t.key)} <span class="badge">${escapeHtml(t.camelot)}</span></td>
+      <td>${(t.energy * 100).toFixed(0)}%</td>
+      <td>${escapeHtml(t.top_mood ?? '—')}</td>`);
+
+    const del = document.createElement('button');
+    del.className = 'ghost'; del.textContent = 'Remove';
+    del.onclick = async () => {
+      await api(`/api/tracks/${t.track_id}`, { method: 'DELETE' });
+      state.selected.delete(t.track_id);
+      loadTracks();
+    };
+    const tdX = document.createElement('td'); tdX.append(del);
+    tr.append(tdX);
+    body.append(tr);
+  }
+  refreshGo();
+}
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const refreshGo = () => { $('go').disabled = state.selected.size < 2; };
+
+// --- uploads ---------------------------------------------------------------
+const drop = $('drop');
+const picker = Object.assign(document.createElement('input'),
+  { type: 'file', multiple: true, accept: 'audio/*' });
+drop.onclick = () => picker.click();
+picker.onchange = () => upload(picker.files);
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); upload(e.dataTransfer.files); };
+
+async function upload(fileList) {
+  if (!fileList?.length) return;
+  const form = new FormData();
+  for (const f of fileList) form.append('files', f);
+  $('uploadStatus').innerHTML = `<span class="muted">Uploading ${fileList.length} file(s)…</span>`;
+  let res;
+  try {
+    res = await api('/api/upload', { method: 'POST', body: form });
+  } catch (e) {
+    $('uploadStatus').innerHTML = `<span class="err">Upload failed: ${escapeHtml(e.message)}</span>`;
+    return;
+  }
+  const notes = res.rejected.map(r =>
+    `<div class="err">${escapeHtml(r.filename)}: ${escapeHtml(r.reason)}</div>`).join('');
+  if (!res.job_id) { $('uploadStatus').innerHTML = notes; return; }
+
+  showProgress('Analysing audio…');
+  const done = await pollJob(res.job_id, (j) => setProgress(j.progress, j.message));
+  hideProgress();
+
+  const failed = (done.result?.failed ?? []).map(f =>
+    `<div class="warn">${escapeHtml(f.filename)}: ${escapeHtml(f.reason)}</div>`).join('');
+  const n = done.result?.analysed?.length ?? 0;
+  $('uploadStatus').innerHTML = notes + failed +
+    `<div class="muted">Analysed ${n} new track${n === 1 ? '' : 's'}.</div>`;
+
+  await loadTracks();
+  // Newly added tracks start selected -- that is almost always what you want.
+  for (const t of done.result?.analysed ?? []) state.selected.add(t.track_id);
+  await loadTracks();
+}
+
+// --- jobs ------------------------------------------------------------------
+function showProgress(msg) {
+  $('progressPanel').style.display = 'block';
+  $('progressMsg').textContent = msg;
+  $('progressBar').style.width = '0%';
+}
+const setProgress = (p, msg) => {
+  $('progressBar').style.width = `${Math.round((p || 0) * 100)}%`;
+  if (msg) $('progressMsg').textContent = msg;
+};
+const hideProgress = () => { $('progressPanel').style.display = 'none'; };
+
+async function pollJob(jobId, onTick) {
+  for (;;) {
+    const job = await api(`/api/jobs/${jobId}`);
+    onTick?.(job);
+    if (job.status === 'done') return job;
+    if (job.status === 'error') { hideProgress(); throw new Error(job.message); }
+    await new Promise(r => setTimeout(r, 600));
+  }
+}
+
+// --- mixing ----------------------------------------------------------------
+$('selectAll').onclick = () => {
+  state.tracks.forEach(t => state.selected.add(t.track_id)); loadTracks();
+};
+$('selectNone').onclick = () => { state.selected.clear(); loadTracks(); };
+$('purge').onclick = async () => {
+  if (!confirm('Delete all uploaded audio, analyses and rendered mixes?')) return;
+  await api('/api/data', { method: 'DELETE' });
+  state.selected.clear();
+  $('resultPanel').style.display = 'none';
+  $('uploadStatus').innerHTML = '<span class="muted">All data deleted.</span>';
+  loadTracks();
+};
+
+$('go').onclick = async () => {
+  $('go').disabled = true;
+  $('resultPanel').style.display = 'none';
+  showProgress('Planning…');
+  const duration = parseFloat($('duration').value);
+  try {
+    const { job_id } = await api('/api/mix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        track_ids: [...state.selected],
+        occasion: state.occasion,
+        prompt: $('prompt').value.trim() || null,
+        duration_minutes: Number.isFinite(duration) ? duration : null,
+        planner: $('planner').value,
+        output_format: $('format').value,
+      }),
+    });
+    const job = await pollJob(job_id, (j) => setProgress(j.progress, j.message));
+    hideProgress();
+    renderResult(job.result);
+  } catch (e) {
+    hideProgress();
+    $('uploadStatus').innerHTML = `<span class="err">${escapeHtml(e.message)}</span>`;
+  } finally {
+    refreshGo();
+  }
+};
+
+const PALETTE = ['#6ee7b7', '#7dd3fc', '#fca5a5', '#fcd34d', '#c4b5fd', '#f9a8d4', '#86efac'];
+
+function renderResult(r) {
+  $('resultPanel').style.display = 'block';
+
+  let meta = `<div class="muted">${escapeHtml(r.planner)} planner`
+    + ` · ${escapeHtml(r.occasion)} · ${r.planned_minutes} min planned</div>`;
+  // Say so when not every selected track made it in. Silently dropping one and
+  // leaving the user to notice is the kind of thing that reads as a bug.
+  const used = r.steps.length;
+  if (used < state.selected.size) {
+    meta += `<div class="muted" style="margin-top:6px">Used ${used} of `
+      + `${state.selected.size} selected tracks to hit the target length.</div>`;
+  }
+  if (r.fallback_reason) {
+    meta += `<div class="warn" style="margin-top:6px">Fell back to the rule planner after `
+      + `${r.llm_attempts} attempt(s): ${escapeHtml(r.fallback_reason)}</div>`;
+  }
+  $('resultMeta').innerHTML = meta;
+
+  // Timeline: each track sized by how long it is actually audible.
+  const spans = r.steps.map((s, i) => {
+    const end = s.transition ? s.transition.out_at : (s.start_at + 60);
+    return Math.max(1, end - (s.start_at || 0));
+  });
+  const total = spans.reduce((a, b) => a + b, 0);
+  $('timeline').innerHTML = r.steps.map((s, i) => {
+    const pct = (spans[i] / total) * 100;
+    // Below ~12% there is no room for a readable label, and a clipped one looks
+    // broken. Drop it and let the tooltip carry the detail.
+    const label = pct < 12 ? '' : `${s.filename.replace(/\.[^.]+$/, '')} · ${s.bpm}`;
+    return `<div class="seg" style="width:${pct}%;background:${PALETTE[i % PALETTE.length]}"
+      title="${escapeHtml(s.filename)} — ${s.bpm} BPM, ${escapeHtml(s.key)}">${escapeHtml(label)}</div>`;
+  }).join('');
+
+  $('player').src = r.audio_url;
+  $('download').href = r.audio_url;
+
+  const rr = r.render;
+  const matched = rr.junctions.filter(j => j.beatmatched).length;
+  $('stats').innerHTML = `
+    <div><b>${(rr.duration_sec / 60).toFixed(1)} min</b><span>length</span></div>
+    <div><b>${rr.lufs ?? '—'} LUFS</b><span>loudness</span></div>
+    <div><b>${rr.peak_db} dB</b><span>peak</span></div>
+    <div><b>${matched}/${rr.junctions.length}</b><span>beat-matched</span></div>
+    <div><b>${rr.worst_seam_ratio.toFixed(2)}×</b><span>worst seam vs. local audio</span></div>`;
+
+  $('showPlan').onclick = async () => {
+    const el = $('planJson');
+    if (el.style.display === 'block') { el.style.display = 'none'; return; }
+    el.textContent = JSON.stringify(await api(r.plan_url), null, 2);
+    el.style.display = 'block';
+  };
+}
+
+loadConfig().then(loadTracks).catch(e =>
+  document.body.insertAdjacentHTML('afterbegin',
+    `<p class="err" style="padding:16px">Could not reach the djmix server: ${escapeHtml(e.message)}</p>`));
+</script>
+</body>
+</html>

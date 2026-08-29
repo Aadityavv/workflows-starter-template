@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # No ffmpeg is installed on purpose: libsndfile (bundled with soundfile)
+      # covers wav/flac/mp3/ogg, so a green run proves the core path has no
+      # system-package prerequisite. ffmpeg is only needed for m4a/aac.
+      - name: Install
+        run: pip install -e ".[dev,llm,web]"
+
+      - name: Lint
+        run: ruff check . && ruff format --check .
+
+      # Test audio is generated, not committed. Its determinism is what makes
+      # the ground truth meaningful, so verify it explicitly here.
+      - name: Verify fixture generation is deterministic
+        run: |
+          python tests/fixtures/generate.py
+          find tests/fixtures/audio -name '*.flac' | sort | xargs sha256sum > /tmp/a.txt
+          python tests/fixtures/generate.py
+          find tests/fixtures/audio -name '*.flac' | sort | xargs sha256sum > /tmp/b.txt
+          diff /tmp/a.txt /tmp/b.txt || (echo "fixture generation is not deterministic" && exit 1)
+
+      # No API keys are configured. conftest blocks the network and strips
+      # provider keys, so the LLM tests must pass against the mock provider.
+      - name: Test
+        run: pytest -q

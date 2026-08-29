@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.djmix-cache/
+build/
+dist/
+out/
+*.wav
+*.mp3
+*.m4a
+
+# Test audio is generated, not stored: generate.py is seeded and deterministic
+# (tests/test_fixtures.py asserts byte-identical regeneration), so committing
+# ~14 MB of FLAC would add repo weight without adding reproducibility.
+tests/fixtures/audio/
+.env

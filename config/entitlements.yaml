@@ -1,0 +1,18 @@
+# Tier limits. Config-driven from day one so that shipping billing later means
+# changing where a user's tier comes from, not hunting hardcoded numbers.
+default_tier: free
+
+tiers:
+  free:
+    max_mix_minutes: 20
+    max_mixes_per_month: 10
+    max_tracks_per_mix: 15
+    max_library_tracks: 100
+    priority_processing: false
+
+  plus:
+    max_mix_minutes: 120
+    max_mixes_per_month: null      # null means unlimited
+    max_tracks_per_mix: 100
+    max_library_tracks: 5000
+    priority_processing: true
