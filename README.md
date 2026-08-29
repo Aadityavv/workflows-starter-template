@@ -4,6 +4,13 @@ Turn your own music files into seamless, DJ-style merged mixes — grouped by
 occasion, or described in plain language.
 
 ```bash
+djmix serve          # then open http://127.0.0.1:8000
+```
+
+Drag your music in, pick an occasion or describe what you want, get a finished
+mix you can play and download. Or use the CLI:
+
+```bash
 djmix analyze ~/Music/library
 djmix mix ~/Music/library --occasion workout --out workout.wav
 djmix mix ~/Music/library --prompt "a 20-minute high-energy pre-workout mix" \
@@ -30,7 +37,7 @@ strong that check actually is — measured, not asserted.
 ## Install
 
 ```bash
-pip install -e ".[dev,llm]"
+pip install -e ".[dev,llm,web]"
 ```
 
 Python 3.11+. No system packages required for wav/flac/mp3/ogg — `soundfile`
@@ -52,10 +59,31 @@ your PATH or from the `imageio-ffmpeg` wheel automatically.
    tempo groups, beat-aligned equal-power crossfades, and a −14 LUFS mastering
    pass with true-peak limiting.
 
+## The web app
+
+`djmix serve` runs a small local server (FastAPI + a single-page UI) at
+http://127.0.0.1:8000. It is a **local** app by design, not a hosted service:
+your audio stays on your machine, and the work happens on your CPU.
+
+Analysis and rendering take real time, so every long operation returns a job id
+the page polls — the UI shows progress rather than hanging on a request.
+
+The result panel shows the running order as a timeline, an audio player, the
+plan JSON, and the objective quality numbers for that render (loudness, peak,
+how many junctions were beat-matched, and the worst seam relative to
+surrounding audio).
+
+Why local rather than a website you can visit: the analysis needs librosa,
+native CPython, and a filesystem, none of which exist in a browser. Hosting it
+for other people would also mean accepting uploads of other people's music onto
+a server, which is a materially different legal proposition — see
+[LEGAL.md](LEGAL.md).
+
 ## Commands
 
 | Command | What it does |
 |---|---|
+| `djmix serve` | Run the local web app (`--port`, `--data`) |
 | `djmix analyze PATH` | Measure a file or a whole directory |
 | `djmix inspect TRACK` | Every measured value for one track |
 | `djmix mix LIBRARY` | Plan and render (`--occasion`, `--prompt`, `--duration`, `--planner`) |
@@ -108,9 +136,11 @@ tempo test runs, so a fixture regression can't be misread as an analyzer bug.
 
 ## Status and limitations
 
-Phases 0 and 1 of a larger product: measurement, planning, validation, and
-rendering, as a CLI. No web UI, job queue, or accounts yet — but the module
-boundaries are drawn so those attach without touching audio code.
+Phases 0 and 1 of a larger product, plus the local web UI and job queue from
+Phase 2. No accounts, object storage, or CLAP mood tagging yet — but the module
+boundaries are drawn so those attach without touching audio code: the web layer
+is a client of the same functions the CLI calls, and adding audio logic to it
+would be a design error.
 
 Read the **Honest limitations** section of [ARCHITECTURE.md](ARCHITECTURE.md)
 before trusting output on real music. In short: transitions are beat-locked but

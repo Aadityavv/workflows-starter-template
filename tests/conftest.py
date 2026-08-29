@@ -23,12 +23,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "fixtures"))
 FIXTURE_AUDIO = Path(__file__).parent / "fixtures" / "audio"
 
 
+LOOPBACK = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}
+
+
 @pytest.fixture(autouse=True)
 def _no_network(monkeypatch):
-    def blocked(*args, **kwargs):
-        raise RuntimeError("network access is not allowed in tests")
+    """Block outbound connections, not sockets outright.
 
-    monkeypatch.setattr(socket, "socket", blocked)
+    An earlier version replaced socket.socket entirely, which also broke
+    asyncio's internal self-pipe and made the in-process HTTP tests unrunnable.
+    Blocking connect() to anything off-loopback is both narrower and a more
+    honest statement of the guarantee: no test reaches a real API, while local
+    plumbing (socketpair, ASGI transports) keeps working.
+    """
+    real_connect = socket.socket.connect
+    real_connect_ex = socket.socket.connect_ex
+
+    def guard(fn):
+        def wrapper(self, address, *args, **kwargs):
+            host = address[0] if isinstance(address, tuple) else address
+            if isinstance(host, str) and host not in LOOPBACK:
+                raise RuntimeError(f"outbound network access is not allowed in tests: {host}")
+            return fn(self, address, *args, **kwargs)
+
+        return wrapper
+
+    monkeypatch.setattr(socket.socket, "connect", guard(real_connect))
+    monkeypatch.setattr(socket.socket, "connect_ex", guard(real_connect_ex))
     for key in ("GROQ_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
         monkeypatch.delenv(key, raising=False)
 

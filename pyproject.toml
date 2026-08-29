@@ -24,13 +24,17 @@ dependencies = [
 
 [project.optional-dependencies]
 llm = ["groq>=0.11", "anthropic>=0.34"]
-dev = ["pytest>=8", "ruff>=0.6"]
+web = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9"]
+dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
 
 [project.scripts]
 djmix = "djmix.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"djmix.web" = ["static/*"]
 
 [tool.ruff]
 line-length = 100

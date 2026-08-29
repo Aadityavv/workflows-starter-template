@@ -315,6 +315,30 @@ def purge(
 
 
 @app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8000, "--port"),
+    data_dir: Path = typer.Option(
+        Path("djmix-data"), "--data", help="Where uploads and mixes live"
+    ),
+    reload: bool = typer.Option(False, "--reload", help="Auto-reload on code changes"),
+) -> None:
+    """Run the local web app, then open http://127.0.0.1:8000 in a browser."""
+    try:
+        import uvicorn
+    except ImportError as exc:  # pragma: no cover
+        console.print('[red]the web extra is not installed[/red]  ->  pip install -e ".[web]"')
+        raise typer.Exit(1) from exc
+
+    from djmix.web.app import create_app
+
+    console.print(f"[green]djmix[/green] serving on http://{host}:{port}")
+    console.print(f"  data directory: {data_dir.resolve()}")
+    console.print(f"[dim]{LEGAL_NOTICE}[/dim]\n")
+    uvicorn.run(create_app(data_dir), host=host, port=port, reload=reload)
+
+
+@app.command()
 def tiers() -> None:
     """Show the configured entitlement tiers."""
     for name in ("free", "plus"):

@@ -53,6 +53,7 @@ audio/      measurement      real DSP, no LLM, no planning
 planning/   ordering         rule planner, LLM planner, validation
 render/     execution        deterministic, zero AI
 llm/        providers        one interface: call_llm(prompt) -> str
+web/        HTTP + UI        FastAPI over the above; no audio logic of its own
 ```
 
 `audio/`, `planning/`, and `render/` do not import each other; they communicate
@@ -103,6 +104,31 @@ The alternative — ramping tempo through the fade — sounds smoother in princi
 but Rubber Band's offline API takes a constant factor, so a ramp means chunked
 processing with seam discontinuities, and it destroys the reproducibility the
 determinism test depends on.
+
+## The web tier
+
+`djmix serve` runs FastAPI plus a single-page UI. It contains no audio logic at
+all — it calls the same `analyze_file`, `RulePlanner`, `LLMPlanner`, and
+`render` the CLI does. If audio code ever appears under `web/`, that is a bug in
+the layering, not a feature.
+
+Analysis is seconds per track and rendering is tens of seconds, so neither can
+run on the request thread. Every long operation is submitted to a job registry
+and returns an id the browser polls.
+
+That registry is an in-process worker thread, not Celery + Redis. For a
+single-user local app that is the right trade — no broker to install, no second
+process to supervise — and the interface (submit → id → poll) is the one a
+distributed queue would expose, so moving to Celery when there are real users
+means replacing `web/jobs.py`, not the API. A single worker is deliberate:
+librosa releases the GIL in native code, but running several analyses at once on
+a laptop mostly thrashes the CPU and makes progress reporting meaningless.
+
+**Local, not hosted, on purpose.** The DSP needs librosa, native CPython, and a
+filesystem, so it cannot run in a browser. Hosting it for other people would
+also mean accepting uploads of other people's music onto a server, which is a
+different legal proposition from mixing your own library on your own machine —
+see LEGAL.md.
 
 ## Honest limitations
 

@@ -1,7 +1,7 @@
 .PHONY: setup test lint fixtures demo clean
 
 setup:
-	pip install -e ".[dev,llm]"
+	pip install -e ".[dev,llm,web]"
 
 test:
 	pytest -q
