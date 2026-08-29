@@ -14,6 +14,7 @@ truth (tempo, key, and which section is loudest) is exact rather than annotated.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -59,6 +60,19 @@ ROLE_PROGRESSION = {
     "outro": "tonic",
 }
 CHORD_INTERVALS = {"maj": (0, 4, 7), "min": (0, 3, 7)}
+
+
+def _seed(name: str) -> int:
+    """Stable per-fixture seed.
+
+    Deliberately NOT Python's built-in hash(): string hashing is randomised per
+    process by PYTHONHASHSEED, so seeding from it made the "deterministic"
+    fixtures differ between runs. Within a single process two calls agreed,
+    which is why an in-process determinism test passed while the ground truth
+    was in fact irreproducible. blake2b is stable across processes, machines,
+    and Python versions.
+    """
+    return int.from_bytes(hashlib.blake2b(name.encode(), digest_size=4).digest(), "big")
 
 
 def _env(n: int, attack: float, decay: float, sr: int = SR) -> np.ndarray:
@@ -193,7 +207,7 @@ def _root_midi(root: str) -> int:
 
 def render_fixture(spec: FixtureSpec, sr: int = SR) -> tuple[np.ndarray, dict]:
     """Render one fixture and return the audio plus its exact ground truth."""
-    rng = np.random.default_rng(abs(hash(spec.name)) % (2**31))
+    rng = np.random.default_rng(_seed(spec.name))
     beat = 60.0 / spec.bpm
     bar = 4 * beat
 

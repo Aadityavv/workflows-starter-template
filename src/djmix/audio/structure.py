@@ -20,6 +20,12 @@ import numpy as np
 
 MIN_CHORUS_SEC = 8.0
 MAX_CHORUS_SEC = 60.0
+# A chorus that covers most of a track is not a chorus, it is a segmentation
+# failure. When clustering collapses the song into one long block the absolute
+# cap above is not enough -- 60 s of an 80 s track is still 75% of it -- so the
+# estimate is also capped as a fraction of the duration, and an estimate that
+# needs that much clamping is treated as unreliable rather than trusted.
+MAX_CHORUS_FRACTION = 0.4
 N_SEGMENT_TYPES = 5
 # Raw per-beat cluster labels flicker, which yields dozens of one-beat
 # "sections". That is not just untidy: every segment boundary becomes an anchor
@@ -232,11 +238,28 @@ def analyze_structure(
     chorus = max(late, key=lambda s: mean_rms(s[0], s[1]))
 
     start, end = chorus[0], chorus[1]
+    span_limit = min(MAX_CHORUS_SEC, MAX_CHORUS_FRACTION * duration)
+
+    if end - start > span_limit:
+        # The chosen "chorus" spans an implausible share of the track, which
+        # means the clustering did not really separate the sections. Trusting a
+        # truncated version of it would put the transition somewhere arbitrary;
+        # the measured energy peak is the better answer and is what the caller
+        # already falls back to elsewhere.
+        return StructureResult(
+            segments=segments,
+            chorus_estimate=energetic_section,
+            confident=False,
+            warnings=[
+                *warnings,
+                f"chorus candidate spans {end - start:.0f}s of a {duration:.0f}s track; "
+                "segmentation did not separate sections, using the energy peak",
+            ],
+        )
+
     if end - start < MIN_CHORUS_SEC:
         end = min(duration, start + MIN_CHORUS_SEC)
         warnings.append("chorus candidate shorter than the minimum; extended")
-    if end - start > MAX_CHORUS_SEC:
-        end = start + MAX_CHORUS_SEC
 
     return StructureResult(
         segments=segments,

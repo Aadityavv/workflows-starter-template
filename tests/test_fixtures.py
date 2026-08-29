@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import generate as G
 import numpy as np
 
@@ -18,11 +20,41 @@ def test_fixtures_exist_and_are_audible(ground_truth):
         assert float(np.abs(y).max()) > 0.1, f"{truth['path']} is effectively silent"
 
 
-def test_generation_is_deterministic(tmp_path):
+def test_generation_is_deterministic_in_process():
     """Same seed, same bytes -- otherwise ground truth drifts under the tests."""
     first, _ = G.render_fixture(G.SPECS[0])
     second, _ = G.render_fixture(G.SPECS[0])
     assert np.array_equal(first, second)
+
+
+def test_generation_is_deterministic_across_processes(tmp_path):
+    """The in-process check above is not sufficient, and this is not a
+    theoretical gap: seeding from Python's built-in hash() passed it while
+    producing different audio on every run, because string hashing is
+    randomised per process. Two separate interpreters, with deliberately
+    different PYTHONHASHSEED values, must produce byte-identical fixtures.
+    """
+    import hashlib
+    import os
+    import subprocess
+    import sys
+
+    def generate_into(directory: Path, hash_seed: str) -> dict[str, str]:
+        env = {**os.environ, "PYTHONHASHSEED": hash_seed}
+        subprocess.run(
+            [sys.executable, str(Path(G.__file__)), "--out", str(directory)],
+            check=True,
+            capture_output=True,
+            env=env,
+        )
+        return {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(directory.glob("*.flac"))
+        }
+
+    first = generate_into(tmp_path / "a", "1")
+    second = generate_into(tmp_path / "b", "2")
+    assert first and first == second, "fixture bytes depend on interpreter state"
 
 
 def test_fixtures_have_real_percussive_transients(ground_truth):
