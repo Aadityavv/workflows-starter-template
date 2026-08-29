@@ -20,7 +20,7 @@ jobs:
       # covers wav/flac/mp3/ogg, so a green run proves the core path has no
       # system-package prerequisite. ffmpeg is only needed for m4a/aac.
       - name: Install
-        run: pip install -e ".[dev,llm]"
+        run: pip install -e ".[dev,llm,web]"
 
       - name: Lint
         run: ruff check . && ruff format --check .
