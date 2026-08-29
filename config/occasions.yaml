@@ -1,0 +1,62 @@
+# Occasion profiles for the rule-based planner.
+#
+# `arc` is the target energy shape across the mix, sampled to however many
+# slots the mix has. `bpm_band` is the tempo range the occasion prefers, and
+# `moods` weights the measured mood-tag distribution. Nothing here is a limit
+# the code hardcodes -- add an occasion by adding a block.
+default_occasion: road trip
+
+occasions:
+  road trip:
+    arc: [0.45, 0.60, 0.70, 0.80, 0.85, 0.80, 0.75, 0.70]
+    bpm_band: [95, 140]
+    moods: {energetic: 0.4, uplifting: 0.4, melancholic: 0.2}
+
+  workout:
+    arc: [0.60, 0.80, 0.90, 0.95, 1.00, 0.95, 0.90, 0.65]
+    bpm_band: [120, 175]
+    moods: {energetic: 0.8, uplifting: 0.2}
+
+  party:
+    arc: [0.50, 0.65, 0.80, 0.72, 0.88, 0.95, 1.00, 0.80]
+    bpm_band: [115, 135]
+    moods: {energetic: 0.6, uplifting: 0.4}
+
+  romantic:
+    arc: [0.30, 0.40, 0.50, 0.60, 0.62, 0.55, 0.45, 0.35]
+    bpm_band: [60, 105]
+    moods: {romantic: 0.7, melancholic: 0.2, spiritual: 0.1}
+
+  spiritual:
+    arc: [0.25, 0.30, 0.35, 0.40, 0.42, 0.38, 0.33, 0.28]
+    bpm_band: [55, 95]
+    moods: {spiritual: 0.7, romantic: 0.15, focus: 0.15}
+
+  focus:
+    arc: [0.45, 0.48, 0.50, 0.50, 0.50, 0.50, 0.48, 0.45]
+    bpm_band: [90, 125]
+    moods: {focus: 0.8, spiritual: 0.2}
+
+  dinner:
+    arc: [0.30, 0.35, 0.40, 0.45, 0.48, 0.45, 0.40, 0.35]
+    bpm_band: [70, 110]
+    moods: {romantic: 0.4, focus: 0.3, uplifting: 0.3}
+
+# Free-text prompts are mapped to an occasion by keyword when the rule planner
+# runs without an LLM. This is deliberately dumb, and documented as such --
+# interpreting free text properly is exactly what the LLM planner is for.
+prompt_keywords:
+  workout: [workout, gym, run, running, training, pre-workout, pump, hiit, cardio]
+  party: [party, club, dance, rave, night out, banger, hype]
+  romantic: [romantic, love, date, intimate, slow jam, sensual]
+  spiritual: [spiritual, meditation, meditative, calm, yoga, prayer, devotional, ambient]
+  focus: [focus, study, work, concentration, coding, deep work, reading]
+  dinner: [dinner, cooking, brunch, background, chill, relaxed, lounge]
+  road trip: [road trip, drive, driving, highway, commute, travel]
+
+weights:
+  energy_fit: 1.0
+  bpm_jump: 0.8
+  key_clash: 0.6
+  tempo_direction: 0.9
+  mood_fit: 0.7
